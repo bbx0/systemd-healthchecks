@@ -1,0 +1,40 @@
+[Unit]
+Description=Submit monitored EXIT_STATUS to healthchecks.io
+Documentation=https://github.com/bbx0/systemd-healthchecks
+
+# Usage:
+# - Set ping key as service override: systemctl edit healthchecks-ping@.service
+#   [Service]
+#   Environment=HC_PING_KEY=<YourKey>
+# - Create slug with same name as the monitored service in your healthchecks.io project
+#   The prefix 'hc-' will be trimmed from the monitored service name and is not part of the slug.
+# - Configure the monitored service unit to ping its result OnSuccess
+#   [Unit]
+#   OnSuccess=healthchecks-ping@%N.service
+# - Optional: For explicit tests set the service unit execution result to success. (The test itself executed successfully.)
+#   [Service]
+#   SuccessExitStatus=0 1
+# - Optional: Configure explicit transmition of failures (add suffix '-fail' to the instance name)
+#   [Unit]
+#   OnFailure=healthchecks-ping@%N-fail.service
+
+[Service]
+Type=oneshot
+# Set via `systemctl edit healthchecks-ping@.service`
+Environment=HC_PING_KEY=
+Environment=HC_BASE_URL=https://hc-ping.com
+
+# Slug is taken from the intance name of this service healthchecks-ping@<myslug>.service
+# Prefix 'hc-' is removed from the instance name (for easier use with dedicated healthcheck service units 'hc-%N')
+# Suffix '-fail' is removed from the instance name (to allow usage in OnFailure requiring a different instance name '%N-fail')
+Environment=HC_SLUG=%i
+
+# Skip submission if no ping key is configured 
+# (Direct environment variable substitution is not supported in ExecCondition, so we need a shell to run the test.)
+ExecCondition=/usr/bin/env sh -c "/usr/bin/test -n \"$HC_PING_KEY\""
+
+# Ping EXIT_STATUS of the monitored service to healthchecks.io
+ExecStart=/usr/bin/env sh -c "\
+slug=$(echo \"$HC_SLUG\" | sed --expression='s/^hc-//' --expression='s/-fail$//') || exit 2; \
+data=$(journalctl _SYSTEMD_INVOCATION_ID=$MONITOR_INVOCATION_ID --output=cat | head --bytes=100kB) || exit 2; \
+curl --fail --silent --show-error --max-time 10 --retry 5 --output /dev/null --request POST --data-raw \"$data\" --url $HC_BASE_URL/$HC_PING_KEY/$slug/$MONITOR_EXIT_STATUS"
