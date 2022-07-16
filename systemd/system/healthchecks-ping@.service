@@ -31,10 +31,12 @@ Environment=HC_SLUG=%i
 
 # Skip submission if no ping key is configured 
 # (Direct environment variable substitution is not supported in ExecCondition, so we need a shell to run the test.)
-ExecCondition=/usr/bin/env sh -c "/usr/bin/test -n \"$HC_PING_KEY\""
+ExecCondition=/bin/sh -c "/usr/bin/test -n \"$HC_PING_KEY\""
+# Only systemd version 251 and above provide the information from the monitored service
+ExecCondition=/bin/sh -c "/usr/bin/test -n \"$MONITOR_EXIT_STATUS\""
 
 # Ping EXIT_STATUS of the monitored service to healthchecks.io
-ExecStart=/usr/bin/env sh -c "\
+ExecStart=/bin/sh -c "\
 slug=$(echo \"$HC_SLUG\" | sed --expression='s/^hc-//' --expression='s/-fail$//') || exit 2; \
 data=$(journalctl _SYSTEMD_INVOCATION_ID=$MONITOR_INVOCATION_ID --output=cat | head --bytes=100kB) || exit 2; \
 curl --fail --silent --show-error --max-time 10 --retry 5 --output /dev/null --request POST --data-raw \"$data\" --url $HC_BASE_URL/$HC_PING_KEY/$slug/$MONITOR_EXIT_STATUS"
