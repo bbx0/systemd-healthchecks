@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the disk space usage is lower than the configured threshold
+Documentation=https://github.com/bbx0/systemd-healthchecks
+
+[Timer]
+OnActiveSec=0
+OnUnitActiveSec=30min
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
