@@ -1,0 +1,22 @@
+[Unit]
+Description=Check if system or user units are in failed state
+Documentation=https://github.com/bbx0/systemd-healthchecks
+OnSuccess=healthchecks-ping@%N.service
+
+[Service]
+Type=oneshot
+
+# Print failed units and set return code 1
+# - Collect failed system units
+# - Collect failed user units from active sessions (https://www.freedesktop.org/software/systemd/man/user@.service.html)
+ExecStart=/usr/bin/env sh -c "\
+units=$(systemctl list-units --state=failed --quiet) || exit 2;\
+activeUsers=$(systemctl list-units --state=active --quiet 'user@*.service' | grep --only-matching --perl-regexp '(?<=user@)[[:digit:]]+(?=.service)'); \
+for user in $activeUsers; do \
+  units+=$(systemd-run --user --machine $user@.host --wait --collect --pipe --quiet --service-type=oneshot systemctl --user list-units --state=failed --quiet) || exit 2; \
+done; \
+test -n \"$units\" && printf \"%%b\" \"$units\" && exit 1; \
+exit 0"
+
+# The test execution itself is successful for both results. If the service unit fails, no ping will be sent and healthchecks will notice the missing ping.
+SuccessExitStatus=0 1

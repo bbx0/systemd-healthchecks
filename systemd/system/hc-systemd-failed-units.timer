@@ -1,0 +1,11 @@
+[Unit]
+Description=Check if system or user units are in failed state
+Documentation=https://github.com/bbx0/systemd-healthchecks
+
+[Timer]
+OnActiveSec=0
+OnUnitActiveSec=15min
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
