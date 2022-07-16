@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for error messages in the Jounal reported in the last hour
+Documentation=https://github.com/bbx0/systemd-healthchecks
+
+[Timer]
+OnActiveSec=0
+OnUnitActiveSec=30min
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
