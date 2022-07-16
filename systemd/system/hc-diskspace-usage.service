@@ -7,7 +7,7 @@ OnSuccess=healthchecks-ping@%N.service
 Type=oneshot
 Environment=THRESHOLD=80
 # Print disk usage when the highest value is above the threshold and return 1
-ExecStart=/usr/bin/env sh -c "\
+ExecStart=!/bin/sh -c "\
 above_threshold=\"$(df --human-readable --portability --print-type | awk \"{ df=strtonum(\\$6); if (df > $THRESHOLD) print; }\")\" || exit 2; \
 test -z \"$above_threshold\" && exit 0 || { printf \"%%b\" \"$above_threshold\" && exit 1; }"
 
