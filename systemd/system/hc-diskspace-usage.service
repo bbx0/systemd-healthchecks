@@ -8,7 +8,7 @@ Type=oneshot
 Environment=THRESHOLD=80
 # Print disk usage when the highest value is above the threshold and return 1
 ExecStart=/usr/bin/env sh -c "\
-above_threshold=$(df --human-readable --portability --print-type | awk \"{ df=strtonum(\\$6); if (df > $THRESHOLD) print; }\") || exit 2; \
+above_threshold=\"$(df --human-readable --portability --print-type | awk \"{ df=strtonum(\\$6); if (df > $THRESHOLD) print; }\")\" || exit 2; \
 test -z \"$above_threshold\" && exit 0 || { printf \"%%b\" \"$above_threshold\" && exit 1; }"
 
 # The test execution itself is successful for both results. If the service unit fails, no ping will be sent and healthchecks will notice the missing ping.
