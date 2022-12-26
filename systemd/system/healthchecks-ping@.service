@@ -25,18 +25,22 @@ Environment=HC_PING_KEY=
 Environment=HC_BASE_URL=https://hc-ping.com
 
 # Slug is taken from the intance name of this service healthchecks-ping@<myslug>.service
-# Prefix 'hc-' is removed from the instance name (for easier use with dedicated healthcheck service units 'hc-%N')
-# Suffix '-fail' is removed from the instance name (to allow usage in OnFailure requiring a different instance name '%N-fail')
+# Example: healthchecks-ping@hc-diskspace-usage.service results in slug 'diskspace-usage'
+# - A prefix 'hc-' is removed from the instance name (for easier use with dedicated healthcheck service units 'hc-%N')
+# - A suffix '-fail' is removed from the instance name (to allow usage in OnFailure requiring a different instance name '%N-fail')
 Environment=HC_SLUG=%i
 
 # Skip submission if no ping key is configured 
-# (Direct environment variable substitution is not supported in ExecCondition, so we need a shell to run the test.)
-ExecCondition=/bin/sh -c "/usr/bin/test -n \"$HC_PING_KEY\""
-# Only systemd version 251 and above provide the information from the monitored service
-ExecCondition=/bin/sh -c "/usr/bin/test -n \"$MONITOR_EXIT_STATUS\""
+ExecCondition=test -n "${HC_PING_KEY}"
+
+# Only systemd version 251 and above provide information about monitored services
+# ($MONITOR_* values are not available in ExecCondition, so we test it in ExecStartPre)
+ExecStartPre=test -n "${MONITOR_EXIT_STATUS}"
+ExecStartPre=test -n "${MONITOR_INVOCATION_ID}"
 
 # Ping EXIT_STATUS of the monitored service to healthchecks.io
-ExecStart=/bin/sh -c "\
-slug=$(echo \"$HC_SLUG\" | sed --expression='s/^hc-//' --expression='s/-fail$//') || exit 2; \
-data=$(journalctl _SYSTEMD_INVOCATION_ID=$MONITOR_INVOCATION_ID --output=cat | head --bytes=100kB) || exit 2; \
-curl --fail --silent --show-error --max-time 10 --retry 5 --output /dev/null --request POST --data-raw \"$data\" --url $HC_BASE_URL/$HC_PING_KEY/$slug/$MONITOR_EXIT_STATUS"
+# (Disable variable substitution by systemd as this is executed within a shell with env var support by its own.)
+ExecStart=:/bin/sh -c "\
+slug=$(echo \"${HC_SLUG}\" | sed --expression='s/^hc-//' --expression='s/-fail$//') || exit 2; \
+data=$(journalctl _SYSTEMD_INVOCATION_ID=${MONITOR_INVOCATION_ID} --output=cat | head --bytes=100kB) || exit 2; \
+curl --fail --silent --show-error --max-time 10 --retry 5 --output /dev/null --request POST --data-raw \"${data}\" --url \"${HC_BASE_URL}/${HC_PING_KEY}/${slug}/${MONITOR_EXIT_STATUS}\""
