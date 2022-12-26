@@ -7,9 +7,9 @@ OnSuccess=healthchecks-ping@%N.service
 Type=oneshot
 
 # Print last error message (1 hour ago), truncate to 10kB and set return code 1
-ExecStart=!/bin/sh -c "\
+ExecStart=:!/bin/sh -c "\
 lasterr=\"$(journalctl --boot --reverse --priority err --lines 1 --output cat --since \"1 hour ago\" | head --bytes=10kB)\" || exit 2;\
-test -n \"$lasterr\" && printf \"%%b\" \"$lasterr\" && exit 1; \
+test -n \"${lasterr}\" && printf \"%%b\" \"${lasterr}\" && exit 1; \
 exit 0"
 
 # The test execution itself is successful for both results. If the service unit fails, no ping will be sent and healthchecks will notice the missing ping.
